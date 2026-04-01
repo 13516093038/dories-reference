@@ -1,0 +1,11 @@
+{
+    "name": "com.dories.reference",
+    "displayName": "Dories Reference",
+    "version": "1.0.0",
+    "unity": "2022.3",
+    "description": "Dories reference and pooling utilities.",
+    "author": {
+        "name": "Dories"
+    },
+    "dependencies": {}
+}
