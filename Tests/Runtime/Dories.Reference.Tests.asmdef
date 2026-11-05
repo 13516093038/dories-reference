@@ -1,0 +1,25 @@
+{
+    "name": "Dories.Reference.Tests",
+    "rootNamespace": "Dories.Reference.Tests",
+    "references": [
+        "Dories.Reference.Runtime",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "Unity.PerformanceTesting"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

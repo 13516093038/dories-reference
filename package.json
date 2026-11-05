@@ -7,5 +7,12 @@
     "author": {
         "name": "Dories"
     },
+    "samples": [
+        {
+            "displayName": "ReferencePool Sample",
+            "description": "引用池借还示例场景，运行后在 [ReferencePool Monitor] 节点 Inspector 查看实时状态。",
+            "path": "Sample"
+        }
+    ],
     "dependencies": {}
 }

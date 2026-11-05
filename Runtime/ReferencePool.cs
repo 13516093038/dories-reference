@@ -1,55 +1,95 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using UnityEngine;
 
 namespace Dories.Reference.Runtime
 {
     /// <summary>
     /// 引用池。
     /// </summary>
-    public static partial class ReferencePool
+    public class ReferencePool
     {
-        private static readonly Dictionary<Type, ReferenceCollection> s_ReferenceCollections = new Dictionary<Type, ReferenceCollection>();
-        private static bool m_EnableStrictCheck = false;
+        private readonly Dictionary<Type, ReferenceCollection> _referenceCollections = new ();
+        private bool _enableStrictCheck = false;
+
+        private static bool s_isCreated = false;
+
+        public ReferencePool()
+        {
+            if (s_isCreated)
+            {
+                throw new InvalidOperationException("ReferencePool is already created.");
+            }
+
+            s_isCreated = true;
+
+#if UNITY_EDITOR
+            ReferencePoolMonitor.Create(this);
+#endif
+        }
+
+        /// <summary>
+        /// 关闭 Domain Reload 进入 Play Mode 时静态字段不会重置，测试也需要每个用例重建
+        /// </summary>
+        [Conditional("UNITY_EDITOR")]
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        internal static void ResetStatics()
+        {
+            s_isCreated = false;
+        }
 
         /// <summary>
         /// 获取或设置是否开启强制检查。
         /// </summary>
-        public static bool EnableStrictCheck
+        public bool EnableStrictCheck
         {
             get
             {
-                return m_EnableStrictCheck;
+                return _enableStrictCheck;
             }
             set
             {
-                m_EnableStrictCheck = value;
+                _enableStrictCheck = value;
             }
         }
 
         /// <summary>
         /// 获取引用池的数量。
         /// </summary>
-        public static int Count
+        public int Count
         {
             get
             {
-                return s_ReferenceCollections.Count;
+                return _referenceCollections.Count;
+            }
+        }
+
+        /// <summary>
+        /// 拷贝当前所有引用集合（供编辑器监视用）。
+        /// </summary>
+        internal void GetCollections(List<ReferenceCollection> results)
+        {
+            results.Clear();
+            lock (_referenceCollections)
+            {
+                results.AddRange(_referenceCollections.Values);
             }
         }
 
         /// <summary>
         /// 清除所有引用池。
         /// </summary>
-        public static void ClearAll()
+        public void ClearAll()
         {
-            lock (s_ReferenceCollections)
+            lock (_referenceCollections)
             {
-                foreach (KeyValuePair<Type, ReferenceCollection> referenceCollection in s_ReferenceCollections)
+                foreach (KeyValuePair<Type, ReferenceCollection> referenceCollection in _referenceCollections)
                 {
                     referenceCollection.Value.RemoveAll();
                 }
 
-                s_ReferenceCollections.Clear();
+                _referenceCollections.Clear();
             }
         }
 
@@ -58,7 +98,7 @@ namespace Dories.Reference.Runtime
         /// </summary>
         /// <typeparam name="T">引用类型。</typeparam>
         /// <returns>引用。</returns>
-        public static T Acquire<T>() where T : class, IReference, new()
+        public T Acquire<T>() where T : class, IReference, new()
         {
             return GetReferenceCollection(typeof(T)).Acquire<T>();
         }
@@ -68,7 +108,7 @@ namespace Dories.Reference.Runtime
         /// </summary>
         /// <param name="referenceType">引用类型。</param>
         /// <returns>引用。</returns>
-        public static IReference Acquire(Type referenceType)
+        public IReference Acquire(Type referenceType)
         {
             InternalCheckReferenceType(referenceType);
             return GetReferenceCollection(referenceType).Acquire();
@@ -78,7 +118,7 @@ namespace Dories.Reference.Runtime
         /// 将引用归还引用池。
         /// </summary>
         /// <param name="reference">引用。</param>
-        public static void Release(IReference reference)
+        public void Release(IReference reference)
         {
             if (reference == null)
             {
@@ -95,7 +135,7 @@ namespace Dories.Reference.Runtime
         /// </summary>
         /// <typeparam name="T">引用类型。</typeparam>
         /// <param name="count">追加数量。</param>
-        public static void Add<T>(int count) where T : class, IReference, new()
+        public void Add<T>(int count) where T : class, IReference, new()
         {
             GetReferenceCollection(typeof(T)).Add<T>(count);
         }
@@ -105,7 +145,7 @@ namespace Dories.Reference.Runtime
         /// </summary>
         /// <param name="referenceType">引用类型。</param>
         /// <param name="count">追加数量。</param>
-        public static void Add(Type referenceType, int count)
+        public void Add(Type referenceType, int count)
         {
             InternalCheckReferenceType(referenceType);
             GetReferenceCollection(referenceType).Add(count);
@@ -116,7 +156,7 @@ namespace Dories.Reference.Runtime
         /// </summary>
         /// <typeparam name="T">引用类型。</typeparam>
         /// <param name="count">移除数量。</param>
-        public static void Remove<T>(int count) where T : class, IReference
+        public void Remove<T>(int count) where T : class, IReference
         {
             GetReferenceCollection(typeof(T)).Remove(count);
         }
@@ -126,7 +166,7 @@ namespace Dories.Reference.Runtime
         /// </summary>
         /// <param name="referenceType">引用类型。</param>
         /// <param name="count">移除数量。</param>
-        public static void Remove(Type referenceType, int count)
+        public void Remove(Type referenceType, int count)
         {
             InternalCheckReferenceType(referenceType);
             GetReferenceCollection(referenceType).Remove(count);
@@ -136,7 +176,7 @@ namespace Dories.Reference.Runtime
         /// 从引用池中移除所有的引用。
         /// </summary>
         /// <typeparam name="T">引用类型。</typeparam>
-        public static void RemoveAll<T>() where T : class, IReference
+        public void RemoveAll<T>() where T : class, IReference
         {
             GetReferenceCollection(typeof(T)).RemoveAll();
         }
@@ -145,15 +185,15 @@ namespace Dories.Reference.Runtime
         /// 从引用池中移除所有的引用。
         /// </summary>
         /// <param name="referenceType">引用类型。</param>
-        public static void RemoveAll(Type referenceType)
+        public void RemoveAll(Type referenceType)
         {
             InternalCheckReferenceType(referenceType);
             GetReferenceCollection(referenceType).RemoveAll();
         }
 
-        private static void InternalCheckReferenceType(Type referenceType)
+        private void InternalCheckReferenceType(Type referenceType)
         {
-            if (!m_EnableStrictCheck)
+            if (!_enableStrictCheck)
             {
                 return;
             }
@@ -174,7 +214,7 @@ namespace Dories.Reference.Runtime
             }
         }
 
-        private static ReferenceCollection GetReferenceCollection(Type referenceType)
+        private ReferenceCollection GetReferenceCollection(Type referenceType)
         {
             if (referenceType == null)
             {
@@ -182,12 +222,12 @@ namespace Dories.Reference.Runtime
             }
 
             ReferenceCollection referenceCollection = null;
-            lock (s_ReferenceCollections)
+            lock (_referenceCollections)
             {
-                if (!s_ReferenceCollections.TryGetValue(referenceType, out referenceCollection))
+                if (!_referenceCollections.TryGetValue(referenceType, out referenceCollection))
                 {
-                    referenceCollection = new ReferenceCollection(referenceType);
-                    s_ReferenceCollections.Add(referenceType, referenceCollection);
+                    referenceCollection = new ReferenceCollection(referenceType, _enableStrictCheck);
+                    _referenceCollections.Add(referenceType, referenceCollection);
                 }
             }
 

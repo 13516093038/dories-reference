@@ -1,0 +1,16 @@
+{
+    "name": "Dories.Reference.Sample",
+    "rootNamespace": "Dories.Reference.Sample",
+    "references": [
+        "Dories.Reference.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
